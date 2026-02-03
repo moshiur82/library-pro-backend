@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url = env("DATABASE_URL")   // Prisma 7+ এর পর এটা schema-এ থাকবে না
+}
+
+model Book {
+  id              Int      @id @default(autoincrement())
+  title           String
+  author          String
+  isbn            String?  @unique
+  category        String?
+  totalCopies     Int      @default(1)
+  availableCopies Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  borrowRecords   BorrowRecord[]
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  joinDate  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  borrowRecords BorrowRecord[]
+}
+
+model BorrowRecord {
+  id         Int      @id @default(autoincrement())
+  bookId     Int
+  memberId   Int
+  borrowDate DateTime @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  status     String   @default("active") // active, returned, overdue
+
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
