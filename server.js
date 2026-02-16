@@ -6,7 +6,7 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS সেটিং — লাইভ + লোকাল সব অনুমতি দাও (wildcard সিনট্যাক্স সরানো হয়েছে)
+// CORS সেটিং — dynamic origin check (wildcard ভুল সরানো)
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = [
@@ -16,7 +16,7 @@ app.use(cors({
       'https://library-pro-beryl-git-main-moshiur82.vercel.app'
     ];
 
-    // যদি origin না থাকে বা allowed list-এ মিলে → অনুমতি দাও
+    // origin না থাকলে বা allowed list-এ থাকলে → অনুমতি দাও
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -27,9 +27,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-
-// OPTIONS preflight হ্যান্ডল করো
-app.options('*', cors());
 
 // JSON পার্সিং
 app.use(express.json());
