@@ -1,17 +1,21 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000; // Railway-এর জন্য process.env.PORT ব্যবহার করো
 
-// CORS সেটিং (ফ্রন্টএন্ড থেকে কল করার জন্য)
+// CORS সেটিং — লাইভ সাইট + লোকাল দুটোই অনুমতি দাও
 app.use(cors({
-  origin: 'http://localhost:3000', // Next.js-এর URL
-  methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  origin: [
+    'http://localhost:3000',                        // লোকাল ডেভেলপমেন্টের জন্য
+    'https://library-pro-beryl.vercel.app',         // তোর লাইভ Vercel সাইট
+    'https://library-pro-beryl-git-main-moshiur82.vercel.app' // যদি Vercel branch URL থাকে
+  ],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true // যদি কুকি/অথেনটিকেশন থাকে
 }));
 
 app.use(express.json());
@@ -177,6 +181,8 @@ app.get('/borrows', async (req, res) => {
   }
 });
 
+// সার্ভার চালু
 app.listen(PORT, () => {
   console.log(`সার্ভার চলছে http://localhost:${PORT}`);
+  console.log(`লাইভ URL: https://library-pro-backend-production.up.railway.app`);
 });
