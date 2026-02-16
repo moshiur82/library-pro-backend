@@ -6,7 +6,7 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS সেটিং — dynamic origin check (wildcard ভুল সরানো)
+// CORS সেটিং — dynamic origin check (কোনো wildcard pattern নেই)
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = [
@@ -31,7 +31,7 @@ app.use(cors({
 // JSON পার্সিং
 app.use(express.json());
 
-// GET /books - সব বইয়ের লিস্ট
+// GET /books
 app.get('/books', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books ORDER BY id DESC');
@@ -42,7 +42,7 @@ app.get('/books', async (req, res) => {
   }
 });
 
-// POST /books - নতুন বই যোগ
+// POST /books
 app.post('/books', async (req, res) => {
   try {
     const { title, author, isbn, category, total_copies } = req.body;
@@ -63,7 +63,7 @@ app.post('/books', async (req, res) => {
   }
 });
 
-// GET /members - সব সদস্যের লিস্ট
+// GET /members
 app.get('/members', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM members ORDER BY id DESC');
@@ -74,7 +74,7 @@ app.get('/members', async (req, res) => {
   }
 });
 
-// POST /members - নতুন সদস্য যোগ
+// POST /members
 app.post('/members', async (req, res) => {
   try {
     const { name, email, phone, address } = req.body;
@@ -95,7 +95,7 @@ app.post('/members', async (req, res) => {
   }
 });
 
-// POST /borrow - বই ধার নেওয়া
+// POST /borrow
 app.post('/borrow', async (req, res) => {
   try {
     const { book_id, member_id } = req.body;
@@ -133,7 +133,7 @@ app.post('/borrow', async (req, res) => {
   }
 });
 
-// PATCH /return/:id - বই ফেরত দেওয়া
+// PATCH /return/:id
 app.patch('/return/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -166,7 +166,7 @@ app.patch('/return/:id', async (req, res) => {
   }
 });
 
-// GET /borrows - সব ধারের লিস্ট
+// GET /borrows
 app.get('/borrows', async (req, res) => {
   try {
     const result = await pool.query(`
