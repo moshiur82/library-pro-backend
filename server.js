@@ -6,18 +6,27 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5000; // Railway-এর জন্য process.env.PORT ব্যবহার করো
 
-// CORS সেটিং — লাইভ সাইট + লোকাল দুটোই অনুমতি দাও
+// CORS সেটিং — সব সম্ভাব্য origin অনুমতি দাও (লাইভ + লোকাল)
 app.use(cors({
   origin: [
-    'http://localhost:3000',                        // লোকাল ডেভেলপমেন্টের জন্য
-    'https://library-pro-beryl.vercel.app',         // তোর লাইভ Vercel সাইট
-    'https://library-pro-beryl-git-main-moshiur82.vercel.app' // যদি Vercel branch URL থাকে
+    'http://localhost:3000',                              // লোকাল ডেভেলপমেন্ট
+    'http://localhost:3001',                              // যদি অন্য পোর্টে চালাও
+    'https://library-pro-beryl.vercel.app',               // তোর মেইন লাইভ সাইট
+    'https://library-pro-beryl-git-main-moshiur82.vercel.app', // যদি branch preview থাকে
+    'https://library-pro-beryl-git-* *.vercel.app',       // সব Vercel branch/preview URL
+    '*'                                                   // সাময়িকভাবে সব origin অনুমতি (প্রোডাকশনে পরে সীমিত করো)
   ],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // যদি কুকি/অথেনটিকেশন থাকে
+  credentials: true, // যদি কুকি বা অথেনটিকেশন থাকে
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
+// CORS preflight রিকোয়েস্ট হ্যান্ডল করো (OPTIONS)
+app.options('*', cors());
+
+// JSON পার্সিং
 app.use(express.json());
 
 // GET /books - সব বইয়ের লিস্ট
