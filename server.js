@@ -4,26 +4,34 @@ const cors = require('cors');
 const pool = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Railway-এর জন্য process.env.PORT ব্যবহার করো
+const PORT = process.env.PORT || 5000; // Railway-এর জন্য process.env.PORT
 
-// CORS সেটিং — সব সম্ভাব্য origin অনুমতি দাও (লাইভ + লোকাল)
+// CORS সেটিং — লাইভ + লোকাল সব অনুমতি দাও (সিনট্যাক্স ঠিক করা হয়েছে)
 app.use(cors({
-  origin: [
-    'http://localhost:3000',                              // লোকাল ডেভেলপমেন্ট
-    'http://localhost:3001',                              // যদি অন্য পোর্টে চালাও
-    'https://library-pro-beryl.vercel.app',               // তোর মেইন লাইভ সাইট
-    'https://library-pro-beryl-git-main-moshiur82.vercel.app', // যদি branch preview থাকে
-    'https://library-pro-beryl-git-* *.vercel.app',       // সব Vercel branch/preview URL
-    '*'                                                   // সাময়িকভাবে সব origin অনুমতি (প্রোডাকশনে পরে সীমিত করো)
-  ],
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://library-pro-beryl.vercel.app',
+      'https://library-pro-beryl-git-main-moshiur82.vercel.app',
+      'https://library-pro-beryl-git-*.vercel.app'  // wildcard pattern — সব branch preview
+    ];
+
+    // যদি origin না থাকে বা allowed list-এ থাকে → অনুমতি দাও
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed) || origin === allowed)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // যদি কুকি বা অথেনটিকেশন থাকে
+  credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
 
-// CORS preflight রিকোয়েস্ট হ্যান্ডল করো (OPTIONS)
+// CORS preflight হ্যান্ডল করো (OPTIONS)
 app.options('*', cors());
 
 // JSON পার্সিং
