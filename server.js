@@ -1,26 +1,21 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db'); // তোমার db.js ফাইল (PostgreSQL pool)
+const pool = require('./db');  // তোমার db.js ফাইল
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS — সব ওয়েবসাইট থেকে অনুমতি (Vercel থেকে আসা রিকোয়েস্টের জন্য)
+// CORS — সব ওয়েবসাইট থেকে অনুমতি (এটাই যথেষ্ট, OPTIONS অটো হ্যান্ডল হয়)
 app.use(cors({
-  origin: '*', // টেস্টের জন্য '*' — পরে চাইলে specific origin দিবে যেমন 'https://library-pro-beryl.vercel.app'
+  origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// OPTIONS preflight হ্যান্ডল করা (CORS error চলে যাবে)
-app.options('*', cors());
-
-// JSON body parse
 app.use(express.json());
 
-// লগিং — কোন রিকোয়েস্ট আসছে দেখার জন্য
+// লগিং — কোন রিকোয়েস্ট আসছে দেখার জন্য (ডিবাগের জন্য)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
   next();
@@ -107,14 +102,13 @@ app.post('/borrow', async (req, res) => {
 
     const borrowDate = new Date();
     const dueDate = new Date(borrowDate);
-    dueDate.setDate(borrowDate.getDate() + 14); // ১৪ দিন পর রিটার্ন ডিউ
+    dueDate.setDate(borrowDate.getDate() + 14);
 
     const borrowResult = await pool.query(
       'INSERT INTO borrow_records (book_id, member_id, borrow_date, due_date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [book_id, member_id, borrowDate, dueDate, 'active']
     );
 
-    // available_copies কমানো
     await pool.query(
       'UPDATE books SET available_copies = available_copies - 1 WHERE id = $1',
       [book_id]
@@ -160,7 +154,7 @@ app.patch('/return/:id', async (req, res) => {
   }
 });
 
-// সার্ভার স্টার্ট — লগিং সহ
+// সার্ভার স্টার্ট
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`সার্ভার চলছে http://0.0.0.0:${PORT}`);
   console.log(`লাইভ URL: https://library-pro-backend-production.up.railway.app`);
