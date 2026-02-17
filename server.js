@@ -1,20 +1,46 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db');  // ← তোমার db.js ফাইল (PostgreSQL pool)
+const pool = require('./db'); // তোমার db.js ফাইল (PostgreSQL pool)
 
 const app = express();
-const PORT = process.env.PORT || 5000;  // Railway-এর জন্য process.env.PORT ব্যবহার করা ভালো
+const PORT = process.env.PORT || 5000;
 
-// CORS — সব ওয়েবসাইট থেকে অনুমতি (পরে চাইলে specific origin দিবে)
-app.use(cors({ origin: '*' }));
+// CORS — সব ওয়েবসাইট থেকে অনুমতি (Vercel থেকে আসা রিকোয়েস্টের জন্য)
+app.use(cors({
+  origin: '*', // টেস্টের জন্য '*' — পরে চাইলে specific origin দিবে যেমন 'https://library-pro-beryl.vercel.app'
+  methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+}));
 
+// OPTIONS preflight হ্যান্ডল করা (CORS error চলে যাবে)
+app.options('*', cors());
+
+// JSON body parse
 app.use(express.json());
+
+// লগিং — কোন রিকোয়েস্ট আসছে দেখার জন্য
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
+  next();
+});
+
+// GET / — টেস্ট রুট
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'Backend চলছে! Railway থেকে টেস্ট রেসপন্স।',
+    port: PORT,
+    time: new Date().toISOString()
+  });
+});
 
 // GET /books — সব বই লিস্ট
 app.get('/books', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books ORDER BY id DESC');
+    console.log('Books fetched:', result.rowCount);
     res.json(result.rows);
   } catch (err) {
     console.error('Books fetch error:', err.message);
@@ -26,6 +52,7 @@ app.get('/books', async (req, res) => {
 app.get('/members', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM members ORDER BY id DESC');
+    console.log('Members fetched:', result.rowCount);
     res.json(result.rows);
   } catch (err) {
     console.error('Members fetch error:', err.message);
@@ -52,6 +79,7 @@ app.get('/borrows', async (req, res) => {
       JOIN members m ON br.member_id = m.id
       ORDER BY br.id DESC
     `);
+    console.log('Borrows fetched:', result.rowCount);
     res.json(result.rows);
   } catch (err) {
     console.error('Borrows fetch error:', err.message);
@@ -132,8 +160,10 @@ app.patch('/return/:id', async (req, res) => {
   }
 });
 
-// সার্ভার স্টার্ট
+// সার্ভার স্টার্ট — লগিং সহ
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`সার্ভার চলছে http://0.0.0.0:${PORT}`);
   console.log(`লাইভ URL: https://library-pro-backend-production.up.railway.app`);
+  console.log(`সময়: ${new Date().toISOString()}`);
+  console.log('CORS সক্রিয়: সব origin অনুমতি দেওয়া হয়েছে');
 });
