@@ -4,29 +4,36 @@ const cors = require('cors');
 const pool = require('./db');  // তোমার db.js ফাইল
 
 const app = express();
+
+// পোর্ট — Railway যা দেয় সেটা নেবে, না দিলে 5000
 const PORT = process.env.PORT || 5000;
 
-// CORS — সব ওয়েবসাইট থেকে অনুমতি (এটাই যথেষ্ট, OPTIONS অটো হ্যান্ডল হয়)
+// CORS — সব origin অনুমতি দাও (Vercel থেকে আসা রিকোয়েস্টের জন্য)
 app.use(cors({
-  origin: '*',
+  origin: '*',                           // টেস্টের জন্য '*' — পরে specific করতে পারো
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// preflight OPTIONS সব URL-এর জন্য অটো হ্যান্ডল হবে — আলাদা app.options লাগবে না
 
 app.use(express.json());
 
-// লগিং — কোন রিকোয়েস্ট আসছে দেখার জন্য (ডিবাগের জন্য)
+// লগিং — প্রতিটা রিকোয়েস্ট দেখার জন্য (Railway logs-এ দেখা যাবে)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
   next();
 });
 
-// GET / — টেস্ট রুট
+// টেস্ট রুট — চেক করার জন্য
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
     message: 'Backend চলছে! Railway থেকে টেস্ট রেসপন্স।',
-    port: PORT,
+    actualPort: PORT,
     time: new Date().toISOString()
   });
 });
@@ -35,7 +42,7 @@ app.get('/', (req, res) => {
 app.get('/books', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books ORDER BY id DESC');
-    console.log('Books fetched:', result.rowCount);
+    console.log(`Books fetched: ${result.rowCount} rows`);
     res.json(result.rows);
   } catch (err) {
     console.error('Books fetch error:', err.message);
@@ -47,7 +54,7 @@ app.get('/books', async (req, res) => {
 app.get('/members', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM members ORDER BY id DESC');
-    console.log('Members fetched:', result.rowCount);
+    console.log(`Members fetched: ${result.rowCount} rows`);
     res.json(result.rows);
   } catch (err) {
     console.error('Members fetch error:', err.message);
@@ -55,7 +62,7 @@ app.get('/members', async (req, res) => {
   }
 });
 
-// GET /borrows — ধারের লিস্ট (join করে বই + সদস্যের নাম দেখানো)
+// GET /borrows — ধারের লিস্ট
 app.get('/borrows', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -74,7 +81,7 @@ app.get('/borrows', async (req, res) => {
       JOIN members m ON br.member_id = m.id
       ORDER BY br.id DESC
     `);
-    console.log('Borrows fetched:', result.rowCount);
+    console.log(`Borrows fetched: ${result.rowCount} rows`);
     res.json(result.rows);
   } catch (err) {
     console.error('Borrows fetch error:', err.message);
@@ -91,14 +98,9 @@ app.post('/borrow', async (req, res) => {
   }
 
   try {
-    // বই আছে কি না + উপলব্ধ কি না চেক
     const bookCheck = await pool.query('SELECT available_copies FROM books WHERE id = $1', [book_id]);
-    if (bookCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'বই পাওয়া যায়নি' });
-    }
-    if (bookCheck.rows[0].available_copies <= 0) {
-      return res.status(400).json({ error: 'এই বই আর উপলব্ধ নেই' });
-    }
+    if (bookCheck.rows.length === 0) return res.status(404).json({ error: 'বই পাওয়া যায়নি' });
+    if (bookCheck.rows[0].available_copies <= 0) return res.status(400).json({ error: 'এই বই আর উপলব্ধ নেই' });
 
     const borrowDate = new Date();
     const dueDate = new Date(borrowDate);
@@ -109,10 +111,7 @@ app.post('/borrow', async (req, res) => {
       [book_id, member_id, borrowDate, dueDate, 'active']
     );
 
-    await pool.query(
-      'UPDATE books SET available_copies = available_copies - 1 WHERE id = $1',
-      [book_id]
-    );
+    await pool.query('UPDATE books SET available_copies = available_copies - 1 WHERE id = $1', [book_id]);
 
     res.status(201).json(borrowResult.rows[0]);
   } catch (err) {
@@ -132,7 +131,7 @@ app.patch('/return/:id', async (req, res) => {
     );
 
     if (borrowCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'এই ধার রেকর্ড পাওয়া যায়নি বা ইতিমধ্যে ফেরত দেওয়া হয়েছে' });
+      return res.status(404).json({ error: 'ধার রেকর্ড পাওয়া যায়নি বা ইতিমধ্যে ফেরত দেওয়া হয়েছে' });
     }
 
     const returnDate = new Date();
@@ -154,7 +153,7 @@ app.patch('/return/:id', async (req, res) => {
   }
 });
 
-// সার্ভার স্টার্ট
+// সার্ভার স্টার্ট — Railway-এর process.env.PORT মেনে চলো
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`সার্ভার চলছে http://0.0.0.0:${PORT}`);
   console.log(`লাইভ URL: https://library-pro-backend-production.up.railway.app`);
