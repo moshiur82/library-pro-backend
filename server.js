@@ -1,42 +1,30 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db');  // তোমার db.js ফাইল
+const pool = require('./db');
 
 const app = express();
-
-// পোর্ট — Railway যা দেয় সেটা নেবে, না দিলে 5000
 const PORT = process.env.PORT || 5000;
 
-// OPTIONS preflight সব route-এর জন্য সরাসরি 204 দিয়ে দাও (CORS error চলে যাবে)
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.sendStatus(204);
-});
-
-// CORS — সব origin অনুমতি দাও (Vercel থেকে আসা রিকোয়েস্টের জন্য)
+// CORS — সব origin অনুমতি দাও (এটাই যথেষ্ট, OPTIONS অটো হ্যান্ডল হয়)
 app.use(cors({
-  origin: '*',                           // টেস্টের জন্য '*' — পরে specific করতে পারো
+  origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  preflightContinue: false
 }));
-
-// preflight OPTIONS সব URL-এর জন্য অটো হ্যান্ডল হবে — আলাদা app.options লাগবে না
 
 app.use(express.json());
 
-// লগিং — প্রতিটা রিকোয়েস্ট দেখার জন্য (Railway logs-এ দেখা যাবে)
+// লগিং — ডিবাগের জন্য
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
   next();
 });
 
-// টেস্ট রুট — চেক করার জন্য
+// টেস্ট রুট
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
@@ -46,7 +34,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// GET /books — সব বই লিস্ট
+// GET /books
 app.get('/books', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books ORDER BY id DESC');
@@ -54,11 +42,11 @@ app.get('/books', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Books fetch error:', err.message);
-    res.status(500).json({ error: 'বই লিস্ট আনতে সমস্যা হয়েছে' });
+    res.status(500).json({ error: 'বই লিস্ট আনতে সমস্যা' });
   }
 });
 
-// GET /members — সব সদস্য লিস্ট
+// GET /members
 app.get('/members', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM members ORDER BY id DESC');
@@ -66,11 +54,11 @@ app.get('/members', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Members fetch error:', err.message);
-    res.status(500).json({ error: 'সদস্য লিস্ট আনতে সমস্যা হয়েছে' });
+    res.status(500).json({ error: 'সদস্য লিস্ট আনতে সমস্যা' });
   }
 });
 
-// GET /borrows — ধারের লিস্ট
+// GET /borrows
 app.get('/borrows', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -93,11 +81,11 @@ app.get('/borrows', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Borrows fetch error:', err.message);
-    res.status(500).json({ error: 'ধারের লিস্ট আনতে সমস্যা হয়েছে' });
+    res.status(500).json({ error: 'ধারের লিস্ট আনতে সমস্যা' });
   }
 });
 
-// POST /borrow — বই ধার নেওয়া
+// POST /borrow
 app.post('/borrow', async (req, res) => {
   const { book_id, member_id } = req.body;
 
@@ -128,7 +116,7 @@ app.post('/borrow', async (req, res) => {
   }
 });
 
-// PATCH /return/:id — বই ফেরত দেওয়া
+// PATCH /return/:id
 app.patch('/return/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -161,7 +149,7 @@ app.patch('/return/:id', async (req, res) => {
   }
 });
 
-// সার্ভার স্টার্ট — Railway-এর process.env.PORT মেনে চলো
+// সার্ভার স্টার্ট
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`সার্ভার চলছে http://0.0.0.0:${PORT}`);
   console.log(`লাইভ URL: https://library-pro-backend-production.up.railway.app`);
