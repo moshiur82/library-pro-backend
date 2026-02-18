@@ -116,6 +116,56 @@ app.post('/borrow', async (req, res) => {
   }
 });
 
+// POST /books — নতুন বই যোগ
+app.post('/books', async (req, res) => {
+  const { title, author, isbn, category, total_copies } = req.body;
+
+  if (!title || !author) {
+    return res.status(400).json({ error: 'শিরোনাম এবং লেখক দরকার' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO books (title, author, isbn, category, total_copies, available_copies)
+       VALUES ($1, $2, $3, $4, $5, $5) RETURNING *`,
+      [title, author, isbn || null, category || null, total_copies || 1]
+    );
+    console.log('Book added:', result.rows[0].id);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Add book error:', err.message);
+    res.status(500).json({ error: 'বই যোগ করতে সমস্যা' });
+  }
+});
+
+// POST /members — নতুন সদস্য যোগ
+app.post('/members', async (req, res) => {
+  const { name, email, phone, address } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: 'নাম এবং ইমেইল দরকার' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO members (name, email, phone, address)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [name, email, phone || null, address || null]
+    );
+    console.log('Member added:', result.rows[0].id);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Add member error:', err.message);
+    res.status(500).json({ error: 'সদস্য যোগ করতে সমস্যা' });
+  }
+});
+
+// Global error handler (অপশনাল)
+app.use((err, req, res, next) => {
+  console.error('Global error:', err.stack);
+  res.status(500).json({ error: 'সার্ভারে অপ্রত্যাশিত সমস্যা' });
+});
+
 // PATCH /return/:id
 app.patch('/return/:id', async (req, res) => {
   const { id } = req.params;
